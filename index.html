@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1,
+        user-scalable=no, viewport-fit=cover">
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <title>Firehose</title>
+
+  <style>
+    :root {
+      --blue: #1769e0;
+      --red: #d63d3d;
+      --text: #15171a;
+      --muted: #74787e;
+      --line: #e8e9eb;
+      --panel: #f7f8fa;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: white;
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont,
+                   "SF Pro Text", "Segoe UI", sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+    }
+
+    button, textarea, input {
+      font: inherit;
+    }
+
+    .app {
+      max-width: 640px;
+      margin: auto;
+      padding:
+        max(20px, env(safe-area-inset-top))
+        18px
+        calc(80px + env(safe-area-inset-bottom));
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 36px;
+    }
+
+    .brand {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: .08em;
+    }
+
+    .build {
+      font-size: 12px;
+      color: var(--muted);
+      background: var(--panel);
+      border-radius: 999px;
+      padding: 7px 10px;
+    }
+
+    .capture {
+      text-align: center;
+      padding-top: 15px;
+    }
+
+    .mic {
+      width: 144px;
+      height: 144px;
+
+      border: none;
+      border-radius: 50%;
+
+      background: var(--blue);
+      color: white;
+
+      font-size: 55px;
+
+      box-shadow:
+        0 14px 38px rgba(23,105,224,.25);
+
+      transition:
+        transform .12s ease,
+        background .2s ease;
+    }
+
+    .mic:active {
+      transform: scale(.96);
+    }
+
+    .mic.recording {
+      background: var(--red);
+
+      animation:
+        pulse 1.25s infinite;
+    }
+
+    @keyframes pulse {
+
+      0% {
+        box-shadow:
+          0 0 0 0 rgba(214,61,61,.35);
+      }
+
+      70% {
+        box-shadow:
+          0 0 0 24px rgba(214,61,61,0);
+      }
+
+      100% {
+        box-shadow:
+          0 0 0 0 rgba(214,61,61,0);
+      }
+    }
+
+    .title {
+      margin-top: 20px;
+      font-size: 20px;
+      font-weight: 750;
+    }
+
+    .help {
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.45;
+    }
+
+    .timer {
+      display: none;
+      margin-top: 12px;
+      font-size: 28px;
+      font-variant-numeric: tabular-nums;
+      font-weight: 650;
+      color: var(--red);
+    }
+
+    .panel {
+      display: none;
+
+      margin-top: 38px;
+
+      border: 1px solid var(--line);
+      border-radius: 18px;
+
+      padding: 17px;
+
+      text-align: left;
+    }
+
+    .panel-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    audio {
+      width: 100%;
+    }
+
+    .success {
+      margin-top: 14px;
+      color: #168052;
+      font-size: 14px;
+      font-weight: 650;
+    }
+
+    .error {
+      display: none;
+
+      margin-top: 28px;
+
+      background: #fff1f1;
+      border: 1px solid #ffd0d0;
+      color: #9d2525;
+
+      border-radius: 14px;
+
+      padding: 14px;
+
+      text-align: left;
+
+      font-size: 13px;
+      line-height: 1.5;
+
+      word-break: break-word;
+    }
+
+    .diagnostic {
+      margin-top: 35px;
+
+      padding-top: 20px;
+
+      border-top:
+        1px solid var(--line);
+
+      color: var(--muted);
+
+      font-size: 12px;
+
+      line-height: 1.5;
+    }
+
+  </style>
+</head>
+
+
+<body>
+
+<div class="app">
+
+  <header>
+
+    <div class="brand">
+      FIREHOSE
+    </div>
+
+    <div class="build">
+      MIC TEST
+    </div>
+
+  </header>
+
+
+  <section class="capture">
+
+    <button
+      id="micButton"
+      class="mic"
+      type="button">
+
+      🎙️
+
+    </button>
+
+
+    <div
+      id="title"
+      class="title">
+
+      Capture a thought
+
+    </div>
+
+
+    <div
+      id="help"
+      class="help">
+
+      Tap the microphone to begin
+
+    </div>
+
+
+    <div
+      id="timer"
+      class="timer">
+
+      0:00
+
+    </div>
+
+
+    <div
+      id="error"
+      class="error">
+    </div>
+
+  </section>
+
+
+  <section
+    id="playbackPanel"
+    class="panel">
+
+    <div class="panel-title">
+      Recording
+    </div>
+
+    <audio
+      id="audioPlayer"
+      controls
+      playsinline>
+    </audio>
+
+    <div class="success">
+      ✓ Firehose captured the audio
+    </div>
+
+  </section>
+
+
+  <div
+    id="diagnostic"
+    class="diagnostic">
+  </div>
+
+</div>
+
+
+<script>
+
+  /*
+   * FIREHOSE
+   * iPHONE MICROPHONE TEST
+   *
+   * This build deliberately does NOT use
+   * SpeechRecognition.
+   *
+   * It requests the microphone directly
+   * using getUserMedia() and records the
+   * resulting MediaStream.
+   */
+
+
+  const micButton =
+    document.getElementById("micButton");
+
+  const title =
+    document.getElementById("title");
+
+  const help =
+    document.getElementById("help");
+
+  const timer =
+    document.getElementById("timer");
+
+  const errorBox =
+    document.getElementById("error");
+
+  const playbackPanel =
+    document.getElementById("playbackPanel");
+
+  const audioPlayer =
+    document.getElementById("audioPlayer");
+
+  const diagnostic =
+    document.getElementById("diagnostic");
+
+
+  let mediaRecorder = null;
+
+  let mediaStream = null;
+
+  let audioChunks = [];
+
+  let recording = false;
+
+  let timerInterval = null;
+
+  let recordingStart = null;
+
+  let currentAudioURL = null;
+
+
+  /*
+   * DIAGNOSTICS
+   */
+
+
+  function updateDiagnostics() {
+
+    const secure =
+      window.isSecureContext;
+
+    const hasMediaDevices =
+      !!(
+        navigator.mediaDevices &&
+        navigator.mediaDevices.getUserMedia
+      );
+
+    const hasMediaRecorder =
+      typeof MediaRecorder !== "undefined";
+
+
+    diagnostic.innerHTML =
+
+      "<strong>Microphone diagnostics</strong><br>" +
+
+      "Secure context: " +
+      (secure ? "YES" : "NO") +
+
+      "<br>" +
+
+      "getUserMedia: " +
+      (hasMediaDevices ? "YES" : "NO") +
+
+      "<br>" +
+
+      "MediaRecorder: " +
+      (hasMediaRecorder ? "YES" : "NO") +
+
+      "<br><br>" +
+
+      navigator.userAgent;
+
+  }
+
+
+  updateDiagnostics();
+
+
+  /*
+   * ERROR DISPLAY
+   */
+
+
+  function showError(error) {
+
+    console.error(error);
+
+    let name =
+      error && error.name
+        ? error.name
+        : "Error";
+
+    let message =
+      error && error.message
+        ? error.message
+        : String(error);
+
+
+    errorBox.style.display =
+      "block";
+
+
+    errorBox.innerHTML =
+
+      "<strong>" +
+      escapeHtml(name) +
+      "</strong>" +
+
+      "<br>" +
+
+      escapeHtml(message);
+
+
+    title.textContent =
+      "Microphone error";
+
+
+    help.textContent =
+      "Firehose could not access the microphone.";
+
+  }
+
+
+  function clearError() {
+
+    errorBox.style.display =
+      "none";
+
+    errorBox.innerHTML =
+      "";
+
+  }
+
+
+  function escapeHtml(value) {
+
+    return String(value)
+
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+
+  }
+
+
+  /*
+   * TIMER
+   */
+
+
+  function startTimer() {
+
+    recordingStart =
+      Date.now();
+
+
+    timer.style.display =
+      "block";
+
+
+    timer.textContent =
+      "0:00";
+
+
+    timerInterval =
+      setInterval(
+        updateTimer,
+        250
+      );
+
+  }
+
+
+  function updateTimer() {
+
+    const elapsed =
+
+      Math.floor(
+        (
+          Date.now() -
+          recordingStart
+        )
+        /
+        1000
+      );
+
+
+    const minutes =
+
+      Math.floor(
+        elapsed / 60
+      );
+
+
+    const seconds =
+
+      String(
+        elapsed % 60
+      ).padStart(
+        2,
+        "0"
+      );
+
+
+    timer.textContent =
+
+      minutes +
+      ":" +
+      seconds;
+
+  }
+
+
+  function stopTimer() {
+
+    clearInterval(
+      timerInterval
+    );
+
+    timerInterval =
+      null;
+
+  }
+
+
+  /*
+   * START RECORDING
+   */
+
+
+  async function startRecording() {
+
+    clearError();
+
+
+    playbackPanel.style.display =
+      "none";
+
+
+    /*
+     * Confirm the browser exposes
+     * microphone capture.
+     */
+
+
+    if (
+      !navigator.mediaDevices ||
+      !navigator.mediaDevices.getUserMedia
+    ) {
+
+      showError(
+        new Error(
+          "getUserMedia is not available in this browser."
+        )
+      );
+
+      return;
+
+    }
+
+
+    if (
+      typeof MediaRecorder ===
+      "undefined"
+    ) {
+
+      showError(
+        new Error(
+          "MediaRecorder is not available in this browser."
+        )
+      );
+
+      return;
+
+    }
+
+
+    try {
+
+      /*
+       * THIS LINE SHOULD CAUSE iOS
+       * TO ASK FOR MICROPHONE PERMISSION.
+       */
+
+
+      mediaStream =
+
+        await navigator.mediaDevices
+          .getUserMedia({
+
+            audio: true,
+
+            video: false
+
+          });
+
+
+      /*
+       * Reset recording data.
+       */
+
+
+      audioChunks =
+        [];
+
+
+      /*
+       * Let Safari choose its preferred
+       * supported audio format.
+       */
+
+
+      mediaRecorder =
+
+        new MediaRecorder(
+          mediaStream
+        );
+
+
+      mediaRecorder.ondataavailable =
+        function(event) {
+
+          if (
+            event.data &&
+            event.data.size > 0
+          ) {
+
+            audioChunks.push(
+              event.data
+            );
+
+          }
+
+        };
+
+
+      mediaRecorder.onerror =
+        function(event) {
+
+          showError(
+
+            event.error ||
+            new Error(
+              "MediaRecorder error"
+            )
+
+          );
+
+        };
+
+
+      mediaRecorder.onstop =
+        function() {
+
+
+          /*
+           * Build one audio Blob from
+           * all recorded chunks.
+           */
+
+
+          const mimeType =
+
+            mediaRecorder.mimeType
+
+            ||
+
+            (
+              audioChunks[0]
+                ? audioChunks[0].type
+                : "audio/mp4"
+            );
+
+
+          const audioBlob =
+
+            new Blob(
+              audioChunks,
+              {
+                type: mimeType
+              }
+            );
+
+
+          /*
+           * Release previous playback URL.
+           */
+
+
+          if (
+            currentAudioURL
+          ) {
+
+            URL.revokeObjectURL(
+              currentAudioURL
+            );
+
+          }
+
+
+          currentAudioURL =
+
+            URL.createObjectURL(
+              audioBlob
+            );
+
+
+          audioPlayer.src =
+            currentAudioURL;
+
+
+          playbackPanel.style.display =
+            "block";
+
+
+          title.textContent =
+            "Thought captured";
+
+
+          help.textContent =
+            "Play it back below.";
+
+
+          /*
+           * Stop the actual microphone.
+           */
+
+
+          if (
+            mediaStream
+          ) {
+
+            mediaStream
+              .getTracks()
+              .forEach(
+                track =>
+                  track.stop()
+              );
+
+          }
+
+
+          mediaStream =
+            null;
+
+        };
+
+
+      /*
+       * Start recording.
+       */
+
+
+      mediaRecorder.start();
+
+
+      recording =
+        true;
+
+
+      micButton.classList.add(
+        "recording"
+      );
+
+
+      /*
+       * Change microphone symbol
+       * into a stop symbol.
+       */
+
+
+      micButton.textContent =
+        "■";
+
+
+      title.textContent =
+        "Recording";
+
+
+      help.textContent =
+        "Tap the red button when finished";
+
+
+      startTimer();
+
+    }
+
+
+    catch (error) {
+
+      /*
+       * If iPhone denies microphone
+       * permission, the exact error
+       * will appear on screen.
+       */
+
+
+      showError(error);
+
+    }
+
+  }
+
+
+  /*
+   * STOP RECORDING
+   */
+
+
+  function stopRecording() {
+
+    if (
+      !mediaRecorder
+    ) {
+      return;
+    }
+
+
+    if (
+      mediaRecorder.state ===
+      "recording"
+    ) {
+
+      mediaRecorder.stop();
+
+    }
+
+
+    recording =
+      false;
+
+
+    micButton.classList.remove(
+      "recording"
+    );
+
+
+    micButton.textContent =
+      "🎙️";
+
+
+    stopTimer();
+
+  }
+
+
+  /*
+   * BUTTON
+   */
+
+
+  micButton.addEventListener(
+
+    "click",
+
+    async function() {
+
+
+      if (
+        recording
+      ) {
+
+        stopRecording();
+
+      }
+
+      else {
+
+        await startRecording();
+
+      }
+
+    }
+
+  );
+
+</script>
+
+</body>
+</html>
